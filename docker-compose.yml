@@ -1,0 +1,58 @@
+version: "2.4"
+
+services:
+  api:
+    depends_on:
+      - postgres
+    build:
+      context: ./apis/nestjs
+      dockerfile: Dockerfile
+    volumes:
+      - ./apis/nestjs/:/home/node
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: db_user
+      POSTGRES_DATABASE: db_dbname
+      POSTGRES_PASSWORD: db_password
+    mem_limit: 2gb
+
+  frontend:
+    depends_on:
+      - api
+    build:
+      context: ./frontends/sveltekit
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontends/sveltekit/:/app
+    environment:
+      API_URL: http://api:8080
+    mem_limit: 2gb
+
+  proxy:
+    image: caddy:2
+    ports:
+      - 127.0.0.1:80:80
+      - 127.0.0.1:443:443
+      - 127.0.0.1:3000:3000
+      - 127.0.0.1:8080:8080
+    volumes:
+      - caddy-data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile
+
+  postgres:
+    image: postgres:14.1
+    restart: always
+    ports:
+      - 127.0.0.1:5432:5432
+    environment:
+      POSTGRES_USER: db_user
+      POSTGRES_DB: db_dbname
+      POSTGRES_PASSWORD: db_password
+    volumes:
+      - pg-data-volume:/var/lib/postgresql/data
+    mem_limit: 1gb
+
+volumes:
+  pg-data-volume: null
+  caddy-data: null
